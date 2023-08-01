@@ -32,7 +32,7 @@ const (
 	levelDebug   Level = "DEBUG"
 )
 
-var logLevels = map[Level]int{
+var levels = map[Level]int{
 	levelFatal:   0,
 	levelError:   1,
 	levelWarning: 2,
@@ -56,7 +56,7 @@ const (
 	DefaultDateFormat = "2006/01/02 15:04:05"
 )
 
-type logger struct {
+type log struct {
 	global *globalProps
 	local  *localProps
 }
@@ -112,7 +112,6 @@ func WithDateFormat(f string) Op {
 	}
 }
 
-// name -> module name, will be visible in log message
 func New(opts ...Op) Logger {
 	gp := globalDefaults()
 	lp := localDefaults()
@@ -121,20 +120,20 @@ func New(opts ...Op) Logger {
 		opt(gp, lp)
 	}
 
-	return &logger{
+	return &log{
 		global: gp,
 		local:  lp,
 	}
 }
 
-func (l *logger) Local(opts ...Op) Logger {
+func (l *log) Local(opts ...Op) Logger {
 	lp := localDefaults()
 
 	for _, opt := range opts {
 		opt(nil, lp)
 	}
 
-	return &logger{
+	return &log{
 		global: l.global,
 		local:  lp,
 	}
@@ -150,11 +149,11 @@ func globalDefaults() *globalProps {
 func localDefaults() *localProps {
 	return &localProps{
 		name:  DefaultName,
-		level: logLevels[DefaultLevel],
+		level: levels[DefaultLevel],
 	}
 }
 
-func (l *logger) SetLevel(level Level) error {
+func (l *log) SetLevel(level Level) error {
 	v, err := parseLevel(level)
 	if err != nil {
 		return err
@@ -165,61 +164,61 @@ func (l *logger) SetLevel(level Level) error {
 }
 
 func parseLevel(level Level) (int, error) {
-	if v, ok := logLevels[Level(strings.ToUpper(string(level)))]; ok {
+	if v, ok := levels[Level(strings.ToUpper(string(level)))]; ok {
 		return v, nil
 	}
 
 	return 0, fmt.Errorf("abort SetGlobalLogLevel -> bad log level type: %s", string(level))
 }
 
-func (l *logger) Infof(format string, v ...any) {
+func (l *log) Infof(format string, v ...any) {
 	l.write(levelInfo, fmt.Sprintf(format, v...))
 }
 
-func (l *logger) Info(message string) {
+func (l *log) Info(message string) {
 	l.write(levelInfo, message)
 }
 
-func (l *logger) Errorf(format string, v ...any) {
+func (l *log) Errorf(format string, v ...any) {
 	l.write(levelError, fmt.Sprintf(format, v...))
 }
 
-func (l *logger) Error(message string) {
+func (l *log) Error(message string) {
 	l.write(levelError, message)
 }
 
-func (l *logger) Warningf(format string, v ...any) {
+func (l *log) Warningf(format string, v ...any) {
 	l.write(levelWarning, fmt.Sprintf(format, v...))
 }
 
-func (l *logger) Warning(message string) {
+func (l *log) Warning(message string) {
 	l.write(levelWarning, message)
 }
 
-func (l *logger) Debugf(format string, v ...any) {
+func (l *log) Debugf(format string, v ...any) {
 	l.write(levelDebug, fmt.Sprintf(format, v...))
 }
 
-func (l *logger) Debug(message string) {
+func (l *log) Debug(message string) {
 	l.write(levelDebug, message)
 }
 
-func (l *logger) Fatalf(format string, v ...any) {
+func (l *log) Fatalf(format string, v ...any) {
 	message := fmt.Sprintf(format, v...)
 	l.write(levelFatal, message)
 	panic(message)
 }
 
-func (l *logger) Fatal(message string) {
+func (l *log) Fatal(message string) {
 	l.write(levelFatal, message)
 	panic(message)
 }
 
-func (l *logger) write(level Level, message string) {
-	if v, ok := logLevels[level]; ok && v <= l.local.level {
+func (l *log) write(level Level, message string) {
+	if v, ok := levels[level]; ok && v <= l.local.level {
 		var (
 			len  = len(message)
-			date = time.Now().Format(DefaultDateFormat)
+			date = time.Now().Format(l.global.dateFormat)
 		)
 
 		if len > 0 && message[len-1] != '\n' {
