@@ -33,11 +33,11 @@ const (
 )
 
 var levels = map[Level]int{
-	levelFatal:   0,
-	levelError:   1,
+	levelDebug:   0,
+	levelInfo:    1,
 	levelWarning: 2,
-	levelInfo:    3,
-	levelDebug:   4,
+	levelError:   3,
+	levelFatal:   4,
 }
 
 type Format int
@@ -87,8 +87,7 @@ func WithLevel(l Level) Op {
 		if lp == nil {
 			return
 		}
-		v, err := parseLevel(l)
-		if err == nil {
+		if v, err := parseLevel(l); err == nil {
 			lp.level = v
 		}
 	}
@@ -113,8 +112,15 @@ func WithDateFormat(f string) Op {
 }
 
 func New(opts ...Op) Logger {
-	gp := globalDefaults()
-	lp := localDefaults()
+	gp := &globalProps{
+		format:     DefaultFormat,
+		dateFormat: DefaultDateFormat,
+	}
+
+	lp := &localProps{
+		name:  DefaultName,
+		level: levels[DefaultLevel],
+	}
 
 	for _, opt := range opts {
 		opt(gp, lp)
@@ -127,29 +133,15 @@ func New(opts ...Op) Logger {
 }
 
 func (l *log) Local(opts ...Op) Logger {
-	lp := localDefaults()
+	lp := *l.local
 
 	for _, opt := range opts {
-		opt(nil, lp)
+		opt(nil, &lp)
 	}
 
 	return &log{
 		global: l.global,
-		local:  lp,
-	}
-}
-
-func globalDefaults() *globalProps {
-	return &globalProps{
-		format:     DefaultFormat,
-		dateFormat: DefaultDateFormat,
-	}
-}
-
-func localDefaults() *localProps {
-	return &localProps{
-		name:  DefaultName,
-		level: levels[DefaultLevel],
+		local:  &lp,
 	}
 }
 
@@ -161,14 +153,6 @@ func (l *log) SetLevel(level Level) error {
 
 	l.local.level = v
 	return nil
-}
-
-func parseLevel(level Level) (int, error) {
-	if v, ok := levels[Level(strings.ToUpper(string(level)))]; ok {
-		return v, nil
-	}
-
-	return 0, fmt.Errorf("abort SetGlobalLogLevel -> bad log level type: %s", string(level))
 }
 
 func (l *log) Infof(format string, v ...any) {
@@ -215,16 +199,26 @@ func (l *log) Fatal(message string) {
 }
 
 func (l *log) write(level Level, message string) {
-	if v, ok := levels[level]; ok && v <= l.local.level {
-		var (
-			len  = len(message)
-			date = time.Now().Format(l.global.dateFormat)
-		)
-
-		if len > 0 && message[len-1] != '\n' {
-			message = message + "\n"
-		}
-
-		fmt.Fprintf(os.Stdout, TextLogFormat, date, level, l.local.name, message)
+	if v, ok := levels[level]; !ok || v < l.local.level {
+		return
 	}
+
+	if len(message) == 0 {
+		return
+	}
+
+	if message[len(message)-1] != '\n' {
+		message = message + "\n"
+	}
+
+	date := time.Now().Format(l.global.dateFormat)
+	fmt.Fprintf(os.Stdout, TextLogFormat, date, level, l.local.name, message)
+}
+
+func parseLevel(level Level) (int, error) {
+	if v, ok := levels[Level(strings.ToUpper(string(level)))]; ok {
+		return v, nil
+	}
+
+	return 0, fmt.Errorf("incorrect log level type: %s", string(level))
 }
