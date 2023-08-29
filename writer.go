@@ -1,17 +1,15 @@
 package log
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
-	"time"
-
-	"github.com/fatih/color"
 )
 
-var (
-	green = color.New(color.FgGreen).SprintFunc()
-	blue  = color.New(color.FgBlue).SprintFunc()
+type WriteMode int
+
+const (
+	ModeNonBlocking WriteMode = iota
+	ModeBlocking
 )
 
 func (l *log) Infof(format string, v ...any) {
@@ -66,55 +64,41 @@ func (l *log) write(level Level, message string) {
 		return
 	}
 
-	log, err := l.formatter(level, message)
-	if err != nil {
-		return
-	}
-
-	if log[len(log)-1] != '\n' {
-		log = log + "\n"
-	}
-
 	for _, w := range l.global.writers {
-		switch l.global.writeMode {
-		case ModeBlocking:
-			fmt.Fprint(w, log)
-		case ModeNonBlocking:
-			l.global.wg.Add(1)
-			go func(w io.Writer) {
-				defer l.global.wg.Done()
-				fmt.Fprint(w, log)
-			}(w)
+		if log, err := l.getFormatted(w.format, level, message); err == nil {
+			l.print(w.writer, l.global.mode, log)
+		}
+	}
+
+	for _, w := range l.local.writers {
+		if log, err := l.getFormatted(w.format, level, message); err == nil {
+			l.print(w.writer, l.global.mode, log)
 		}
 	}
 }
 
-func (l *log) formatter(level Level, message string) (string, error) {
-	switch l.global.format {
+func (l *log) print(writer io.Writer, mode WriteMode, log string) {
+	switch mode {
+	case ModeBlocking:
+		fmt.Fprintln(writer, log)
+	case ModeNonBlocking:
+		l.global.Add(1)
+		go func(w io.Writer) {
+			defer l.global.Done()
+			fmt.Fprintln(w, log)
+		}(writer)
+	}
+}
+
+func (l *log) getFormatted(format Format, level Level, message string) (string, error) {
+	switch format {
 	case FormatText:
-		name := l.local.name
-		if len(name) > 7 {
-			name = name[:7]
-		}
-		return fmt.Sprintf(
-			TextLogFormat,
-			time.Now().Format(l.global.dateFormat),
-			green(level),
-			blue(name),
-			message,
-		), nil
+		return formatter.Text(l, level, message)
+	case FormatTextColor:
+		return formatter.TextColor(l, level, message)
 	case FormatJson:
-		b, err := json.Marshal(map[string]string{
-			"time":    time.Now().Format(l.global.dateFormat),
-			"level":   string(level),
-			"module":  l.local.name,
-			"message": message,
-		})
-		if err != nil {
-			return "", fmt.Errorf("error while formatting the log message: %v", err)
-		}
-		return string(b), nil
+		return formatter.Json(l, level, message)
 	default:
-		return "", fmt.Errorf("incorrect log format: %v", l.global.format)
+		return "", fmt.Errorf("incorrect log format: %v", format)
 	}
 }

@@ -42,23 +42,7 @@ var levels = map[Level]int{
 	Fatal:   4,
 }
 
-type Format int
-
 const (
-	FormatText Format = iota
-	FormatJson
-)
-
-type WriteMode int
-
-const (
-	ModeNonBlocking WriteMode = iota
-	ModeBlocking
-)
-
-const (
-	TextLogFormat = "%s | %14s | %16s | %s"
-
 	DefaultLevel      = Info
 	DefaultName       = "<...>"
 	DefaultFormat     = FormatText
@@ -67,16 +51,21 @@ const (
 )
 
 type globalProps struct {
-	writers    []io.Writer
-	writeMode  WriteMode
-	format     Format
+	writers    []writer
+	mode       WriteMode
 	dateFormat string
-	wg         sync.WaitGroup
+	sync.WaitGroup
 }
 
 type localProps struct {
-	name  string
-	level int
+	writers []writer
+	name    string
+	level   int
+}
+
+type writer struct {
+	writer io.Writer
+	format Format
 }
 
 type Op func(*globalProps, *localProps)
@@ -101,21 +90,12 @@ func WithLevel(l Level) Op {
 	}
 }
 
-func WithFormat(f Format) Op {
+func WithMode(m WriteMode) Op {
 	return func(gp *globalProps, lp *localProps) {
 		if gp == nil {
 			return
 		}
-		gp.format = f
-	}
-}
-
-func WithWriteMode(m WriteMode) Op {
-	return func(gp *globalProps, lp *localProps) {
-		if gp == nil {
-			return
-		}
-		gp.writeMode = m
+		gp.mode = m
 	}
 }
 
@@ -128,12 +108,13 @@ func WithDateFormat(f string) Op {
 	}
 }
 
-func WithWriter(w io.Writer) Op {
+func WithWriter(w io.Writer, f Format) Op {
 	return func(gp *globalProps, lp *localProps) {
-		if gp == nil {
-			return
+		if gp != nil {
+			gp.writers = append(gp.writers, writer{w, f})
+		} else if lp != nil {
+			lp.writers = append(lp.writers, writer{w, f})
 		}
-		gp.writers = append(gp.writers, w)
 	}
 }
 
@@ -144,9 +125,8 @@ type log struct {
 
 func New(opts ...Op) Logger {
 	gp := &globalProps{
-		format:     DefaultFormat,
 		dateFormat: DefaultDateFormat,
-		writeMode:  DefaultWriteMode,
+		mode:       DefaultWriteMode,
 	}
 
 	lp := &localProps{
@@ -159,7 +139,10 @@ func New(opts ...Op) Logger {
 	}
 
 	if len(gp.writers) == 0 {
-		gp.writers = append(gp.writers, os.Stdout)
+		gp.writers = append(gp.writers, writer{
+			writer: os.Stdout,
+			format: FormatTextColor,
+		})
 	}
 
 	return &log{
@@ -192,7 +175,7 @@ func (l *log) SetLevel(level Level) error {
 }
 
 func (l *log) Sync() {
-	l.global.wg.Wait()
+	l.global.Wait()
 }
 
 func parseLevel(level Level) (int, error) {
