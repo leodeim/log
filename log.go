@@ -1,13 +1,11 @@
 package log
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Logger interface {
@@ -44,23 +42,7 @@ var levels = map[Level]int{
 	Fatal:   4,
 }
 
-type Format int
-
 const (
-	FormatText Format = iota
-	FormatJson
-)
-
-type WriteMode int
-
-const (
-	ModeNonBlocking WriteMode = iota
-	ModeBlocking
-)
-
-const (
-	TextLogFormat = "%s | %7s | %7s | %s"
-
 	DefaultLevel      = Info
 	DefaultName       = "<...>"
 	DefaultFormat     = FormatText
@@ -68,22 +50,22 @@ const (
 	DefaultDateFormat = "2006/01/02 15:04:05"
 )
 
-type log struct {
-	global *globalProps
-	local  *localProps
-}
-
 type globalProps struct {
-	writers    []io.Writer
-	writeMode  WriteMode
-	format     Format
+	writers    []writer
+	mode       WriteMode
 	dateFormat string
-	wg         sync.WaitGroup
+	sync.WaitGroup
 }
 
 type localProps struct {
-	name  string
-	level int
+	writers []writer
+	name    string
+	level   int
+}
+
+type writer struct {
+	writer io.Writer
+	format Format
 }
 
 type Op func(*globalProps, *localProps)
@@ -108,21 +90,12 @@ func WithLevel(l Level) Op {
 	}
 }
 
-func WithFormat(f Format) Op {
+func WithMode(m WriteMode) Op {
 	return func(gp *globalProps, lp *localProps) {
 		if gp == nil {
 			return
 		}
-		gp.format = f
-	}
-}
-
-func WithWriteMode(m WriteMode) Op {
-	return func(gp *globalProps, lp *localProps) {
-		if gp == nil {
-			return
-		}
-		gp.writeMode = m
+		gp.mode = m
 	}
 }
 
@@ -135,20 +108,25 @@ func WithDateFormat(f string) Op {
 	}
 }
 
-func WithWriter(w io.Writer) Op {
+func WithWriter(w io.Writer, f Format) Op {
 	return func(gp *globalProps, lp *localProps) {
-		if gp == nil {
-			return
+		if gp != nil {
+			gp.writers = append(gp.writers, writer{w, f})
+		} else if lp != nil {
+			lp.writers = append(lp.writers, writer{w, f})
 		}
-		gp.writers = append(gp.writers, w)
 	}
+}
+
+type log struct {
+	global *globalProps
+	local  *localProps
 }
 
 func New(opts ...Op) Logger {
 	gp := &globalProps{
-		format:     DefaultFormat,
 		dateFormat: DefaultDateFormat,
-		writeMode:  DefaultWriteMode,
+		mode:       DefaultWriteMode,
 	}
 
 	lp := &localProps{
@@ -161,7 +139,10 @@ func New(opts ...Op) Logger {
 	}
 
 	if len(gp.writers) == 0 {
-		gp.writers = append(gp.writers, os.Stdout)
+		gp.writers = append(gp.writers, writer{
+			writer: os.Stdout,
+			format: FormatTextColor,
+		})
 	}
 
 	return &log{
@@ -193,113 +174,8 @@ func (l *log) SetLevel(level Level) error {
 	return nil
 }
 
-func (l *log) Infof(format string, v ...any) {
-	l.write(Info, fmt.Sprintf(format, v...))
-}
-
-func (l *log) Info(message string) {
-	l.write(Info, message)
-}
-
-func (l *log) Errorf(format string, v ...any) {
-	l.write(Error, fmt.Sprintf(format, v...))
-}
-
-func (l *log) Error(message string) {
-	l.write(Error, message)
-}
-
-func (l *log) Warningf(format string, v ...any) {
-	l.write(Warning, fmt.Sprintf(format, v...))
-}
-
-func (l *log) Warning(message string) {
-	l.write(Warning, message)
-}
-
-func (l *log) Debugf(format string, v ...any) {
-	l.write(Debug, fmt.Sprintf(format, v...))
-}
-
-func (l *log) Debug(message string) {
-	l.write(Debug, message)
-}
-
-func (l *log) Fatalf(format string, v ...any) {
-	message := fmt.Sprintf(format, v...)
-	l.write(Fatal, message)
-	panic(message)
-}
-
-func (l *log) Fatal(message string) {
-	l.write(Fatal, message)
-	panic(message)
-}
-
-func (l *log) write(level Level, message string) {
-	if v, ok := levels[level]; !ok || v < l.local.level {
-		return
-	}
-
-	if len(message) == 0 {
-		return
-	}
-
-	log, err := l.formatter(level, message)
-	if err != nil {
-		return
-	}
-
-	if log[len(log)-1] != '\n' {
-		log = log + "\n"
-	}
-
-	for _, w := range l.global.writers {
-		switch l.global.writeMode {
-		case ModeBlocking:
-			fmt.Fprint(w, log)
-		case ModeNonBlocking:
-			l.global.wg.Add(1)
-			go func(w io.Writer) {
-				defer l.global.wg.Done()
-				fmt.Fprint(w, log)
-			}(w)
-		}
-	}
-}
-
 func (l *log) Sync() {
-	l.global.wg.Wait()
-}
-
-func (l *log) formatter(level Level, message string) (string, error) {
-	switch l.global.format {
-	case FormatText:
-		name := l.local.name
-		if len(name) > 7 {
-			name = name[:7]
-		}
-		return fmt.Sprintf(
-			TextLogFormat,
-			time.Now().Format(l.global.dateFormat),
-			level,
-			name,
-			message,
-		), nil
-	case FormatJson:
-		b, err := json.Marshal(map[string]string{
-			"time":    time.Now().Format(l.global.dateFormat),
-			"level":   string(level),
-			"module":  l.local.name,
-			"message": message,
-		})
-		if err != nil {
-			return "", fmt.Errorf("error while formatting the log message: %v", err)
-		}
-		return string(b), nil
-	default:
-		return "", fmt.Errorf("incorrect log format: %v", l.global.format)
-	}
+	l.global.Wait()
 }
 
 func parseLevel(level Level) (int, error) {
