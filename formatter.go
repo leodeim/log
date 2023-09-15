@@ -22,9 +22,12 @@ const (
 )
 
 var (
-	green  = color.New(color.FgGreen).SprintFunc()
-	blue   = color.New(color.FgBlue).SprintFunc()
-	yellow = color.New(color.FgYellow).SprintFunc()
+	blue = color.New(color.FgBlue).SprintFunc()
+
+	magenta = color.New(color.FgMagenta).SprintFunc()
+	green   = color.New(color.FgGreen).SprintFunc()
+	yellow  = color.New(color.FgYellow).SprintFunc()
+	red     = color.New(color.FgRed).SprintFunc()
 )
 
 type _formatter struct{}
@@ -52,11 +55,28 @@ func (_formatter) TextColor(l *log, level Level, message string) (string, error)
 	}
 	return fmt.Sprintf(
 		ColorTextLogFormat,
-		yellow(time.Now().Format(l.global.dateFormat)),
-		green(level),
+		time.Now().Format(l.global.dateFormat),
+		levelToColor(level),
 		blue(name),
 		message,
 	), nil
+}
+
+func levelToColor(level Level) string {
+	switch level {
+	case Fatal:
+		return red(level)
+	case Error:
+		return red(level)
+	case Warning:
+		return yellow(level)
+	case Info:
+		return green(level)
+	case Debug:
+		return magenta(level)
+	default:
+		return string(level)
+	}
 }
 
 func (_formatter) Json(l *log, level Level, message string) (string, error) {
