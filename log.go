@@ -45,7 +45,7 @@ var levels = map[Level]int{
 const (
 	DefaultLevel      = Info
 	DefaultName       = "<...>"
-	DefaultFormat     = FormatText
+	DefaultFormat     = FormatTextColor
 	DefaultWriteMode  = ModeBlocking
 	DefaultDateFormat = "2006/01/02 15:04:05"
 )
@@ -141,7 +141,7 @@ func New(opts ...Op) Logger {
 	if len(gp.writers) == 0 {
 		gp.writers = append(gp.writers, writer{
 			writer: os.Stdout,
-			format: FormatTextColor,
+			format: DefaultFormat,
 		})
 	}
 
