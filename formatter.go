@@ -22,8 +22,7 @@ const (
 )
 
 var (
-	blue = color.New(color.FgBlue).SprintFunc()
-
+	blue    = color.New(color.FgBlue).SprintFunc()
 	magenta = color.New(color.FgMagenta).SprintFunc()
 	green   = color.New(color.FgGreen).SprintFunc()
 	yellow  = color.New(color.FgYellow).SprintFunc()
@@ -34,11 +33,12 @@ type _formatter struct{}
 
 var formatter = _formatter{}
 
-func (_formatter) Text(l *log, level Level, message string) (string, error) {
+func (_formatter) text(l *log, level Level, message string) (string, error) {
 	name := l.local.name
 	if len(name) > 7 {
 		name = name[:7]
 	}
+
 	return fmt.Sprintf(
 		TextLogFormat,
 		time.Now().Format(l.global.dateFormat),
@@ -48,11 +48,12 @@ func (_formatter) Text(l *log, level Level, message string) (string, error) {
 	), nil
 }
 
-func (_formatter) TextColor(l *log, level Level, message string) (string, error) {
+func (_formatter) textColor(l *log, level Level, message string) (string, error) {
 	name := l.local.name
 	if len(name) > 7 {
 		name = name[:7]
 	}
+
 	return fmt.Sprintf(
 		ColorTextLogFormat,
 		time.Now().Format(l.global.dateFormat),
@@ -79,15 +80,17 @@ func levelToColor(level Level) string {
 	}
 }
 
-func (_formatter) Json(l *log, level Level, message string) (string, error) {
+func (_formatter) json(l *log, level Level, message string) (string, error) {
 	b, err := json.Marshal(map[string]string{
 		"time":    time.Now().Format(l.global.dateFormat),
 		"level":   string(level),
 		"module":  l.local.name,
 		"message": message,
 	})
+
 	if err != nil {
-		return "", fmt.Errorf("error while formatting the log message: %v", err)
+		return "", fmt.Errorf("error while formatting log message: %v", err)
 	}
+
 	return string(b), nil
 }

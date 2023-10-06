@@ -56,7 +56,12 @@ func (l *log) Fatal(message string) {
 }
 
 func (l *log) write(level Level, message string) {
-	if v, ok := levels[level]; !ok || v < l.local.level {
+	v, ok := levels[level]
+	if !ok {
+		return
+	}
+
+	if v < l.local.level {
 		return
 	}
 
@@ -65,39 +70,45 @@ func (l *log) write(level Level, message string) {
 	}
 
 	for _, w := range l.global.writers {
-		if log, err := l.getFormatted(w.format, level, message); err == nil {
-			l.print(w.writer, l.global.mode, log)
+		m, err := l.format(w.format, level, message)
+		if err != nil {
+			continue
 		}
+
+		l.out(w.writer, l.global.mode, m)
 	}
 
 	for _, w := range l.local.writers {
-		if log, err := l.getFormatted(w.format, level, message); err == nil {
-			l.print(w.writer, l.global.mode, log)
+		m, err := l.format(w.format, level, message)
+		if err != nil {
+			continue
 		}
+
+		l.out(w.writer, l.global.mode, m)
 	}
 }
 
-func (l *log) print(writer io.Writer, mode WriteMode, log string) {
+func (l *log) out(writer io.Writer, mode WriteMode, message string) {
 	switch mode {
 	case ModeBlocking:
-		fmt.Fprintln(writer, log)
+		fmt.Fprintln(writer, message)
 	case ModeNonBlocking:
 		l.global.Add(1)
 		go func(w io.Writer) {
 			defer l.global.Done()
-			fmt.Fprintln(w, log)
+			fmt.Fprintln(w, message)
 		}(writer)
 	}
 }
 
-func (l *log) getFormatted(format Format, level Level, message string) (string, error) {
+func (l *log) format(format Format, level Level, message string) (string, error) {
 	switch format {
 	case FormatText:
-		return formatter.Text(l, level, message)
+		return formatter.text(l, level, message)
 	case FormatTextColor:
-		return formatter.TextColor(l, level, message)
+		return formatter.textColor(l, level, message)
 	case FormatJson:
-		return formatter.Json(l, level, message)
+		return formatter.json(l, level, message)
 	default:
 		return "", fmt.Errorf("incorrect log format: %v", format)
 	}
