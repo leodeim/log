@@ -50,3 +50,50 @@ func TestGlobalLogger(t *testing.T) {
 		})
 	}
 }
+
+func TestLocalLogger(t *testing.T) {
+	testCases := []struct {
+		name         string
+		level        Level
+		message      string
+		expectedLine string
+	}{
+		{name: "ONE", level: Debug, message: "world", expectedLine: "|  INFO |     ONE | world"},
+		{name: "TWO", message: "world", expectedLine: ""},
+		{name: "THREE", level: Fatal, message: "world", expectedLine: ""},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w1 := &DummyWriter{}
+			w2 := &DummyWriter{}
+
+			g := New(
+				WithLevel(Error),
+				WithMode(ModeBlocking),
+				WithWriter(w1, FormatText),
+			)
+
+			l := g.NewLocal(
+				WithName(tc.name),
+				WithWriter(w2, FormatText),
+			)
+
+			if tc.level != "" {
+				l.SetLevel(tc.level)
+			}
+
+			l.Info(tc.message)
+
+			if tc.expectedLine != "" {
+				require.NotEmpty(t, w1.Lines)
+				require.NotEmpty(t, w2.Lines)
+				assert.Contains(t, w1.Lines[0], tc.expectedLine)
+				assert.Contains(t, w2.Lines[0], tc.expectedLine)
+			} else {
+				assert.Empty(t, w1.Lines)
+				assert.Empty(t, w2.Lines)
+			}
+		})
+	}
+}
