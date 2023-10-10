@@ -51,14 +51,14 @@ const (
 )
 
 type globalProps struct {
-	writers    []writer
+	writers    []*writer
 	mode       WriteMode
 	dateFormat string
 	sync.WaitGroup
 }
 
 type localProps struct {
-	writers []writer
+	writers []*writer
 	name    string
 	level   int
 }
@@ -66,6 +66,7 @@ type localProps struct {
 type writer struct {
 	writer io.Writer
 	format Format
+	sync.Mutex
 }
 
 type Op func(*globalProps, *localProps)
@@ -117,9 +118,9 @@ func WithDateFormat(f string) Op {
 func WithWriter(w io.Writer, f Format) Op {
 	return func(gp *globalProps, lp *localProps) {
 		if gp != nil {
-			gp.writers = append(gp.writers, writer{w, f})
+			gp.writers = append(gp.writers, &writer{writer: w, format: f})
 		} else if lp != nil {
-			lp.writers = append(lp.writers, writer{w, f})
+			lp.writers = append(lp.writers, &writer{writer: w, format: f})
 		}
 	}
 }
@@ -147,7 +148,7 @@ func New(opts ...Op) Logger {
 	}
 
 	if len(gp.writers) == 0 {
-		gp.writers = append(gp.writers, writer{
+		gp.writers = append(gp.writers, &writer{
 			writer: os.Stdout,
 			format: DefaultFormat,
 		})
