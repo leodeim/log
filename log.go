@@ -12,16 +12,11 @@ type Logger interface {
 	NewLocal(opts ...Op) Logger
 	SetLevel(level Level) error
 	Close()
-	Infof(format string, v ...any)
-	Info(message string)
-	Errorf(format string, v ...any)
-	Error(message string)
-	Warningf(format string, v ...any)
-	Warning(message string)
-	Debugf(format string, v ...any)
-	Debug(message string)
-	Fatalf(format string, v ...any)
-	Fatal(message string)
+	Info() *message
+	Error() *message
+	Warning() *message
+	Debug() *message
+	Fatal() *message
 }
 
 type Level string
@@ -50,11 +45,17 @@ const (
 	DefaultDateFormat = "2006/01/02 15:04:05"
 )
 
+type WriteMode int
+
+const (
+	ModeNonBlocking WriteMode = iota
+	ModeBlocking
+)
+
 type globalProps struct {
 	writers    []*writer
 	mode       WriteMode
 	dateFormat string
-	sync.WaitGroup
 }
 
 type localProps struct {
@@ -66,7 +67,7 @@ type localProps struct {
 type writer struct {
 	writer io.Writer
 	format Format
-	sync.Mutex
+	mu     sync.Mutex
 }
 
 type Op func(*globalProps, *localProps)
@@ -126,8 +127,9 @@ func WithWriter(w io.Writer, f Format) Op {
 }
 
 type log struct {
-	global *globalProps
-	local  *localProps
+	global    *globalProps
+	local     *localProps
+	processor *processor
 }
 
 // New main logger instance, accepts both global and local options:
@@ -154,10 +156,13 @@ func New(opts ...Op) Logger {
 		})
 	}
 
-	return &log{
-		global: gp,
-		local:  lp,
+	l := &log{
+		global:    gp,
+		local:     lp,
+		processor: NewProcessor(gp.mode),
 	}
+
+	return l
 }
 
 // New local logger instance, accepts local options:
@@ -170,8 +175,9 @@ func (l *log) NewLocal(opts ...Op) Logger {
 	}
 
 	return &log{
-		global: l.global,
-		local:  &lp,
+		global:    l.global,
+		local:     &lp,
+		processor: l.processor,
 	}
 }
 
@@ -188,7 +194,35 @@ func (l *log) SetLevel(level Level) error {
 
 // Close logger, should be closed before application exit in case of non blocking mode
 func (l *log) Close() {
-	l.global.Wait()
+	// TODO: implement close on processor to stop run()
+}
+
+func (l *log) Info() *message {
+	return l.newMessage(Info)
+}
+
+func (l *log) Error() *message {
+	return l.newMessage(Error)
+}
+
+func (l *log) Warning() *message {
+	return l.newMessage(Warning)
+}
+
+func (l *log) Debug() *message {
+	return l.newMessage(Debug)
+}
+
+func (l *log) Fatal() *message {
+	return l.newMessage(Fatal)
+}
+
+func (l *log) newMessage(level Level) *message {
+	return &message{
+		super: l,
+		level: level,
+		props: make(map[string]string),
+	}
 }
 
 func parseLevel(level Level) (int, error) {

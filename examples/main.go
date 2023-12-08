@@ -13,6 +13,7 @@ var examples = []func(){
 	jsonLogger,
 	simpleTextLogger,
 	nonBlocking,
+	propsLogger,
 }
 
 func main() {
