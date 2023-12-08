@@ -51,5 +51,20 @@ func nonBlocking() {
 	l.Info().Msg("I'm working in Non Blocking mode, so I need Sync() before application exits")
 	l.Info().Msg("All log lines are buffered")
 	l.Info().Msg("And writted one by one")
-	time.Sleep(400 * time.Millisecond)
+	l.Info().Msg("1")
+	l.Info().Msg("2")
+	l.Info().Msg("3")
+	l.Info().Msg("4")
+	l.Info().Msg("5")
+	l.Info().Msg("6")
+	l.Info().Msg("7")
+	l.Info().Msg("8")
+	l.Info().Msg("9")
+	l.Info().Msg("10")
+	time.Sleep(100 * time.Millisecond)
+}
+
+func propsLogger() {
+	l := log.New(log.WithName("props"), log.WithWriter(os.Stdout, log.FormatTextColor))
+	l.Warning().Prop("prop1", "hello").Prop("prop2", "world").Msg("I can log in simple text format")
 }

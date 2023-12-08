@@ -3,6 +3,7 @@ package log
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -17,8 +18,9 @@ const (
 )
 
 const (
-	ColorTextLogFormat = "%s | %14s | %16s | %s"
-	TextLogFormat      = "%s | %5s | %7s | %s"
+	ColorTextLogFormat = "%s | %14s | %16s | %s %s"
+	TextLogFormat      = "%s | %5s | %7s | %s %s"
+	TextPropFormat     = " | %s=%s"
 )
 
 var (
@@ -27,6 +29,7 @@ var (
 	green   = color.New(color.FgGreen).SprintFunc()
 	yellow  = color.New(color.FgYellow).SprintFunc()
 	red     = color.New(color.FgRed).SprintFunc()
+	cyan    = color.New(color.FgCyan).SprintFunc()
 )
 
 type _formatter struct{}
@@ -34,15 +37,12 @@ type _formatter struct{}
 var formatter = _formatter{}
 
 type formatterProps struct {
-	level      *Level
-	message    *string
-	format     *Format
-	name       *string
-	dateFormat *string
+	message *message
+	format  Format
 }
 
 func (_formatter) Get(props *formatterProps) (string, error) {
-	switch *props.format {
+	switch props.format {
 	case FormatText:
 		return formatter.text(props)
 	case FormatTextColor:
@@ -50,38 +50,68 @@ func (_formatter) Get(props *formatterProps) (string, error) {
 	case FormatJson:
 		return formatter.json(props)
 	default:
-		return "", fmt.Errorf("incorrect log format: %v", *props.format)
+		return "", fmt.Errorf("incorrect log format: %v", props.format)
 	}
 }
 
 func (_formatter) text(props *formatterProps) (string, error) {
-	name := *props.name
+	logger := props.message.super
+
+	name := logger.local.name
 	if len(name) > 7 {
 		name = name[:7]
 	}
+
+	msgProps := messageProps(props.message.props)
 
 	return fmt.Sprintf(
 		TextLogFormat,
-		time.Now().Format(*props.dateFormat),
-		*props.level,
+		time.Now().Format(logger.global.dateFormat),
+		props.message.level,
 		name,
-		*props.message,
+		props.message.text,
+		msgProps,
 	), nil
 }
 
+func messageProps(props map[string]string) string {
+	all := strings.Builder{}
+
+	for k, v := range props {
+		all.WriteString(fmt.Sprintf(TextPropFormat, k, v))
+	}
+
+	return all.String()
+}
+
 func (_formatter) textColor(props *formatterProps) (string, error) {
-	name := *props.name
+	logger := props.message.super
+
+	name := logger.local.name
 	if len(name) > 7 {
 		name = name[:7]
 	}
 
+	msgProps := messagePropsColor(props.message.props)
+
 	return fmt.Sprintf(
 		ColorTextLogFormat,
-		time.Now().Format(*props.dateFormat),
-		levelToColor(*props.level),
+		time.Now().Format(logger.global.dateFormat),
+		levelToColor(props.message.level),
 		blue(name),
-		*props.message,
+		props.message.text,
+		msgProps,
 	), nil
+}
+
+func messagePropsColor(props map[string]string) string {
+	all := strings.Builder{}
+
+	for k, v := range props {
+		all.WriteString(fmt.Sprintf(TextPropFormat, k, cyan(v)))
+	}
+
+	return all.String()
 }
 
 func levelToColor(level Level) string {
@@ -102,11 +132,13 @@ func levelToColor(level Level) string {
 }
 
 func (_formatter) json(props *formatterProps) (string, error) {
+	logger := props.message.super
+
 	b, err := json.Marshal(map[string]string{
-		"time":    time.Now().Format(*props.dateFormat),
-		"level":   string(*props.level),
-		"module":  *props.name,
-		"message": *props.message,
+		"time":    time.Now().Format(logger.global.dateFormat),
+		"level":   string(props.message.level),
+		"module":  logger.local.name,
+		"message": props.message.text,
 	})
 
 	if err != nil {

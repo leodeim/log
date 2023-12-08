@@ -19,6 +19,7 @@ func (m *message) Msgf(format string, args ...any) {
 	m.super.processor.Do(m)
 }
 
-func (m *message) Prop(key string, value string) {
+func (m *message) Prop(key string, value string) *message {
 	m.props[key] = value
+	return m
 }

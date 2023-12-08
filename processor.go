@@ -65,13 +65,7 @@ func (p *processor) write(m *message) {
 	}
 
 	for _, w := range m.super.global.writers {
-		str, err := formatter.Get(&formatterProps{
-			level:      &m.level,
-			message:    &m.text,
-			format:     &w.format,
-			name:       &m.super.local.name,
-			dateFormat: &m.super.global.dateFormat,
-		})
+		str, err := formatter.Get(&formatterProps{m, w.format})
 		if err != nil {
 			continue
 		}
@@ -80,13 +74,7 @@ func (p *processor) write(m *message) {
 	}
 
 	for _, w := range m.super.local.writers {
-		str, err := formatter.Get(&formatterProps{
-			level:      &m.level,
-			message:    &m.text,
-			format:     &w.format,
-			name:       &m.super.local.name,
-			dateFormat: &m.super.global.dateFormat,
-		})
+		str, err := formatter.Get(&formatterProps{m, w.format})
 		if err != nil {
 			continue
 		}

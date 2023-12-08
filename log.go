@@ -198,37 +198,30 @@ func (l *log) Close() {
 }
 
 func (l *log) Info() *message {
-	return &message{
-		super: l,
-		level: Info,
-	}
+	return l.newMessage(Info)
 }
 
 func (l *log) Error() *message {
-	return &message{
-		super: l,
-		level: Error,
-	}
+	return l.newMessage(Error)
 }
 
 func (l *log) Warning() *message {
-	return &message{
-		super: l,
-		level: Warning,
-	}
+	return l.newMessage(Warning)
 }
 
 func (l *log) Debug() *message {
-	return &message{
-		super: l,
-		level: Debug,
-	}
+	return l.newMessage(Debug)
 }
 
 func (l *log) Fatal() *message {
+	return l.newMessage(Fatal)
+}
+
+func (l *log) newMessage(level Level) *message {
 	return &message{
 		super: l,
-		level: Fatal,
+		level: level,
+		props: make(map[string]string),
 	}
 }
 
