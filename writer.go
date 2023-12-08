@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+const buffSize = 100
+
 type WriteMode int
 
 const (
@@ -11,51 +13,68 @@ const (
 	ModeBlocking
 )
 
+type logLine struct {
+	msg   string
+	level Level
+}
+
 func (l *log) Infof(format string, v ...any) {
-	l.log(Info, fmt.Sprintf(format, v...))
+	l.log(logLine{level: Info, msg: fmt.Sprintf(format, v...)})
 }
 
 func (l *log) Info(message string) {
-	l.log(Info, message)
+	l.log(logLine{level: Info, msg: message})
 }
 
 func (l *log) Errorf(format string, v ...any) {
-	l.log(Error, fmt.Sprintf(format, v...))
+	l.log(logLine{level: Error, msg: fmt.Sprintf(format, v...)})
 }
 
 func (l *log) Error(message string) {
-	l.log(Error, message)
+	l.log(logLine{level: Error, msg: message})
 }
 
 func (l *log) Warningf(format string, v ...any) {
-	l.log(Warning, fmt.Sprintf(format, v...))
+	l.log(logLine{level: Warning, msg: fmt.Sprintf(format, v...)})
 }
 
 func (l *log) Warning(message string) {
-	l.log(Warning, message)
+	l.log(logLine{level: Warning, msg: message})
 }
 
 func (l *log) Debugf(format string, v ...any) {
-	l.log(Debug, fmt.Sprintf(format, v...))
+	l.log(logLine{level: Debug, msg: fmt.Sprintf(format, v...)})
 }
 
 func (l *log) Debug(message string) {
-	l.log(Debug, message)
+	l.log(logLine{level: Debug, msg: message})
 }
 
 func (l *log) Fatalf(format string, v ...any) {
 	message := fmt.Sprintf(format, v...)
-	l.log(Fatal, message)
+	l.log(logLine{level: Fatal, msg: message})
 	panic(message)
 }
 
 func (l *log) Fatal(message string) {
-	l.log(Fatal, message)
+	l.log(logLine{level: Fatal, msg: message})
 	panic(message)
 }
 
-func (l *log) log(level Level, msg string) {
-	v, ok := levels[level]
+func (l *log) log(line logLine) {
+	switch l.global.mode {
+	case ModeBlocking:
+		l.write(line)
+	case ModeNonBlocking:
+		select {
+		case l.global.buf <- &line:
+		default:
+		}
+	}
+}
+
+func (l *log) write(line logLine) {
+	v, ok := levels[line.level]
 	if !ok {
 		return
 	}
@@ -64,12 +83,12 @@ func (l *log) log(level Level, msg string) {
 		return
 	}
 
-	if len(msg) == 0 {
+	if len(line.msg) == 0 {
 		return
 	}
 
 	for _, w := range l.global.writers {
-		m, err := l.format(w.format, level, msg)
+		m, err := l.format(w.format, line.level, line.msg)
 		if err != nil {
 			continue
 		}
@@ -78,7 +97,7 @@ func (l *log) log(level Level, msg string) {
 	}
 
 	for _, w := range l.local.writers {
-		m, err := l.format(w.format, level, msg)
+		m, err := l.format(w.format, line.level, line.msg)
 		if err != nil {
 			continue
 		}
@@ -87,20 +106,35 @@ func (l *log) log(level Level, msg string) {
 	}
 }
 
+func (l *log) run() {
+	l.global.buf = make(chan *logLine, buffSize)
+
+	go func() {
+		for {
+			select {
+			case line := <-l.global.buf:
+				if line != nil {
+					l.write(*line)
+				}
+			}
+		}
+	}()
+}
+
 func (l *log) writeByMode(w *writer, mode WriteMode, msg string) {
 	switch mode {
 	case ModeBlocking:
-		l.write(w, msg)
+		l.writeWithLock(w, msg)
 	case ModeNonBlocking:
-		l.global.Add(1)
-		go func(w *writer) {
-			defer l.global.Done()
-			l.write(w, msg)
-		}(w)
+		l.writeDirect(w, msg)
 	}
 }
 
-func (l *log) write(w *writer, msg string) {
+func (l *log) writeDirect(w *writer, msg string) {
+	fmt.Fprintln(w.writer, msg)
+}
+
+func (l *log) writeWithLock(w *writer, msg string) {
 	w.Lock()
 	defer w.Unlock()
 

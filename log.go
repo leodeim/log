@@ -55,6 +55,7 @@ type globalProps struct {
 	mode       WriteMode
 	dateFormat string
 	sync.WaitGroup
+	buf chan *logLine
 }
 
 type localProps struct {
@@ -154,10 +155,16 @@ func New(opts ...Op) Logger {
 		})
 	}
 
-	return &log{
+	l := &log{
 		global: gp,
 		local:  lp,
 	}
+
+	if l.global.mode == ModeNonBlocking {
+		l.run()
+	}
+
+	return l
 }
 
 // New local logger instance, accepts local options:

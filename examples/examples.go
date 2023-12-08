@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/leonidasdeim/log"
 )
@@ -48,4 +49,5 @@ func nonBlocking() {
 	defer l.Close()
 	l.Info("I'm working in Non Blocking mode, so I need Sync() before application exits")
 	l.Info("All logs are written in goroutines")
+	time.Sleep(400 * time.Millisecond)
 }
