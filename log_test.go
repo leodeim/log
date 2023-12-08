@@ -2,6 +2,7 @@ package log
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,8 +36,12 @@ func TestGlobalLogger(t *testing.T) {
 				WithWriter(w2, FormatText),
 			)
 
-			l.Info(tc.message)
+			l.Info().Msg(tc.message)
 			l.Close()
+
+			if tc.mode == ModeNonBlocking {
+				time.Sleep(100 * time.Millisecond)
+			}
 
 			if tc.expectedLine != "" {
 				require.NotEmpty(t, w1.Lines)
@@ -83,7 +88,7 @@ func TestLocalLogger(t *testing.T) {
 				l.SetLevel(tc.level)
 			}
 
-			l.Info(tc.message)
+			l.Info().Msg(tc.message)
 
 			if tc.expectedLine != "" {
 				require.NotEmpty(t, w1.Lines)
