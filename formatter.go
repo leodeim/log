@@ -131,15 +131,26 @@ func levelToColor(level Level) string {
 	}
 }
 
+type JsonStruct struct {
+	Time    string            `json:"time"`
+	Level   string            `json:"level"`
+	Module  string            `json:"module"`
+	Message string            `json:"message"`
+	Props   map[string]string `json:"props"`
+}
+
 func (_formatter) json(props *formatterProps) (string, error) {
 	logger := props.message.super
 
-	b, err := json.Marshal(map[string]string{
-		"time":    time.Now().Format(logger.global.dateFormat),
-		"level":   string(props.message.level),
-		"module":  logger.local.name,
-		"message": props.message.text,
-	})
+	j := JsonStruct{
+		Time:    time.Now().Format(logger.global.dateFormat),
+		Level:   string(props.message.level),
+		Module:  logger.local.name,
+		Message: props.message.text,
+		Props:   props.message.props,
+	}
+
+	b, err := json.Marshal(j)
 
 	if err != nil {
 		return "", fmt.Errorf("error while formatting log message: %v", err)

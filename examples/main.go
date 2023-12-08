@@ -14,6 +14,7 @@ var examples = []func(){
 	simpleTextLogger,
 	nonBlocking,
 	propsLogger,
+	propsJsonLogger,
 }
 
 func main() {

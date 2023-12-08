@@ -68,3 +68,8 @@ func propsLogger() {
 	l := log.New(log.WithName("props"), log.WithWriter(os.Stdout, log.FormatTextColor))
 	l.Warning().Prop("prop1", "hello").Prop("prop2", "world").Msg("I can log in simple text format")
 }
+
+func propsJsonLogger() {
+	l := log.New(log.WithName("propsJson"), log.WithWriter(os.Stdout, log.FormatJson))
+	l.Warning().Prop("prop1", "hello").Prop("prop2", "world").Msg("I can log in simple json format")
+}
