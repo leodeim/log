@@ -59,7 +59,9 @@ func (p *processor) write(m *message) {
 		return
 	}
 
-	if v < m.super.local.level {
+	logger := m.super
+
+	if v < logger.local.level {
 		return
 	}
 
@@ -67,39 +69,39 @@ func (p *processor) write(m *message) {
 		return
 	}
 
-	for _, w := range m.super.global.writers {
+	for _, w := range logger.global.writers {
 		str, err := formatter.Get(&formatterProps{m, w.format})
 		if err != nil {
 			continue
 		}
 
-		p.writeByMode(w, m.super.global.mode, str)
+		p.writeByMode(w, str)
 	}
 
-	for _, w := range m.super.local.writers {
+	for _, w := range logger.local.writers {
 		str, err := formatter.Get(&formatterProps{m, w.format})
 		if err != nil {
 			continue
 		}
 
-		p.writeByMode(w, m.super.global.mode, str)
+		p.writeByMode(w, str)
 	}
 }
 
-func (p *processor) writeByMode(w *writer, mode WriteMode, msg string) {
-	switch mode {
+func (p *processor) writeByMode(w *writer, msg string) {
+	switch p.mode {
 	case ModeBlocking:
-		p.writeWithLock(w, msg)
+		p.writeSync(w, msg)
 	case ModeNonBlocking:
-		p.writeDirect(w, msg)
+		p.writeAsync(w, msg)
 	}
 }
 
-func (p *processor) writeDirect(w *writer, msg string) {
+func (p *processor) writeAsync(w *writer, msg string) {
 	fmt.Fprintln(w.writer, msg)
 }
 
-func (p *processor) writeWithLock(w *writer, msg string) {
+func (p *processor) writeSync(w *writer, msg string) {
 	w.mu.Lock()
 	fmt.Fprintln(w.writer, msg)
 	w.mu.Unlock()
