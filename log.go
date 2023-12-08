@@ -194,7 +194,13 @@ func (l *log) SetLevel(level Level) error {
 
 // Close logger, should be closed before application exit in case of non blocking mode
 func (l *log) Close() {
-	// TODO: implement close on processor to stop run()
+	defer func() {
+		if recover() != nil {
+			fmt.Println("log: error closing buffer channel")
+		}
+	}()
+
+	close(l.processor.buf)
 }
 
 func (l *log) Info() *message {

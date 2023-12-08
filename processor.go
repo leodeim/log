@@ -27,18 +27,21 @@ func (p *processor) run() {
 	p.buf = make(chan *message, buffSize)
 
 	go func() {
-		for {
-			select {
-			case msg := <-p.buf:
-				if msg != nil {
-					p.write(msg)
-				}
+		for msg := range p.buf {
+			if msg != nil {
+				p.write(msg)
 			}
 		}
 	}()
 }
 
 func (p *processor) Do(m *message) {
+	defer func() {
+		if recover() != nil {
+			fmt.Println("log: error writing to buffer")
+		}
+	}()
+
 	switch p.mode {
 	case ModeBlocking:
 		p.write(m)
