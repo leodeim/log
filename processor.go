@@ -86,6 +86,10 @@ func (p *processor) write(m *message) {
 
 		p.writeByMode(w, str)
 	}
+
+	if m.level == Fatal {
+		panic(m.text)
+	}
 }
 
 func (p *processor) writeByMode(w *writer, msg string) {
