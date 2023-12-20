@@ -48,7 +48,7 @@ const (
 type WriteMode int
 
 const (
-	ModeNonBlocking WriteMode = iota
+	ModeNonBlocking WriteMode = 1 + iota
 	ModeBlocking
 )
 
