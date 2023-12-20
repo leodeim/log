@@ -36,20 +36,28 @@ func (p *processor) run() {
 }
 
 func (p *processor) Do(m *message) {
+	switch p.mode {
+	case ModeBlocking:
+		p.write(m)
+	case ModeNonBlocking:
+		p.addToBuf(m)
+	}
+
+	if m.level == Fatal {
+		panic(m.text)
+	}
+}
+
+func (p *processor) addToBuf(m *message) {
 	defer func() {
 		if recover() != nil {
 			fmt.Println("log: error writing to buffer")
 		}
 	}()
 
-	switch p.mode {
-	case ModeBlocking:
-		p.write(m)
-	case ModeNonBlocking:
-		select {
-		case p.buf <- m:
-		default:
-		}
+	select {
+	case p.buf <- m:
+	default:
 	}
 }
 
@@ -85,10 +93,6 @@ func (p *processor) write(m *message) {
 		}
 
 		p.writeByMode(w, str)
-	}
-
-	if m.level == Fatal {
-		panic(m.text)
 	}
 }
 
