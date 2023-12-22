@@ -11,6 +11,7 @@ import (
 type Logger interface {
 	NewLocal(opts ...Op) Logger
 	SetLevel(level Level) error
+	Level() Level
 	Close()
 	Info() *message
 	Error() *message
@@ -35,6 +36,14 @@ var levels = map[Level]int{
 	Warning: 2,
 	Error:   3,
 	Fatal:   4,
+}
+
+var levelsRev = map[int]Level{
+	0: Debug,
+	1: Info,
+	2: Warning,
+	3: Error,
+	4: Fatal,
 }
 
 const (
@@ -190,6 +199,15 @@ func (l *log) SetLevel(level Level) error {
 
 	l.local.level = v
 	return nil
+}
+
+// Get log level for current logger instance
+func (l *log) Level() Level {
+	if v, ok := levelsRev[l.local.level]; ok {
+		return v
+	}
+
+	return ""
 }
 
 // Close logger, should be closed before application exit in case of non blocking mode
