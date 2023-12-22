@@ -15,7 +15,7 @@ func defaultLogger() {
 
 func customLevel() {
 	l := log.New(log.WithName("cust"), log.WithLevel(log.Warning))
-	l.Warning().Msg("I only logging Warning level and above")
+	l.Warning().Prop("level", string(l.Level())).Msg("I only logging Warning level and above")
 	l.Info().Msg("This will not be writter to the log")
 }
 
