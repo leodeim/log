@@ -20,7 +20,7 @@ const (
 const (
 	ColorTextLogFormat = "%s | %14s | %16s | %s %s"
 	TextLogFormat      = "%s | %5s | %7s | %s %s"
-	TextPropFormat     = " | %s=%s"
+	TextPropFormat     = " | %s=%v"
 )
 
 var (
@@ -74,7 +74,7 @@ func (_formatter) text(props *formatterProps) (string, error) {
 	), nil
 }
 
-func messageProps(props map[string]string) string {
+func messageProps(props map[string]interface{}) string {
 	all := strings.Builder{}
 
 	for k, v := range props {
@@ -104,7 +104,7 @@ func (_formatter) textColor(props *formatterProps) (string, error) {
 	), nil
 }
 
-func messagePropsColor(props map[string]string) string {
+func messagePropsColor(props map[string]interface{}) string {
 	all := strings.Builder{}
 
 	for k, v := range props {
@@ -132,11 +132,11 @@ func levelToColor(level Level) string {
 }
 
 type JsonStruct struct {
-	Time    string            `json:"time"`
-	Level   string            `json:"level"`
-	Module  string            `json:"module"`
-	Message string            `json:"message"`
-	Props   map[string]string `json:"props"`
+	Time    string                 `json:"time"`
+	Level   string                 `json:"level"`
+	Module  string                 `json:"module"`
+	Message string                 `json:"message"`
+	Props   map[string]interface{} `json:"props"`
 }
 
 func (_formatter) json(props *formatterProps) (string, error) {

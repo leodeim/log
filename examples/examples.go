@@ -15,7 +15,7 @@ func defaultLogger() {
 
 func customLevel() {
 	l := log.New(log.WithName("cust"), log.WithLevel(log.Warning))
-	l.Warning().Prop("level", string(l.Level())).Msg("I only logging Warning level and above")
+	l.Warning().Prop("level", l.Level()).Msg("I only logging Warning level and above")
 	l.Info().Msg("This will not be writter to the log")
 }
 
@@ -66,10 +66,10 @@ func nonBlocking() {
 
 func propsLogger() {
 	l := log.New(log.WithName("props"), log.WithWriter(os.Stdout, log.FormatTextColor))
-	l.Warning().Prop("prop1", "hello").Prop("prop2", "world").Msg("I can log in simple text format")
+	l.Warning().Prop("prop1", 123).Prop("prop2", "hello").Msg("I can log in simple text format")
 }
 
 func propsJsonLogger() {
 	l := log.New(log.WithName("propsJson"), log.WithWriter(os.Stdout, log.FormatJson))
-	l.Warning().Prop("prop1", "hello").Prop("prop2", "world").Msg("I can log in simple json format")
+	l.Warning().Prop("prop1", struct{ Name string }{"Leo"}).Prop("prop2", 1.23).Msg("I can log in simple json format")
 }

@@ -245,7 +245,7 @@ func (l *log) newMessage(level Level) *message {
 	return &message{
 		super: l,
 		level: level,
-		props: make(map[string]string),
+		props: make(map[string]interface{}),
 	}
 }
 

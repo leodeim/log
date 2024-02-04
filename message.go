@@ -6,7 +6,7 @@ type message struct {
 	super *log
 	level Level
 	text  string
-	props map[string]string
+	props map[string]interface{}
 }
 
 func (m *message) Msg(text string) {
@@ -19,7 +19,7 @@ func (m *message) Msgf(format string, args ...any) {
 	m.super.processor.Do(m)
 }
 
-func (m *message) Prop(key string, value string) *message {
+func (m *message) Prop(key string, value interface{}) *message {
 	m.props[key] = value
 	return m
 }
