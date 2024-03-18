@@ -15,6 +15,7 @@ var examples = []func(){
 	nonBlocking,
 	propsLogger,
 	propsJsonLogger,
+	errorLogger,
 }
 
 func main() {

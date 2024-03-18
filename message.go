@@ -23,3 +23,12 @@ func (m *message) Prop(key string, value interface{}) *message {
 	m.props[key] = value
 	return m
 }
+
+func (m *message) Err(err error) *message {
+	if err == nil {
+		return m
+	}
+
+	m.props["error"] = err.Error()
+	return m
+}

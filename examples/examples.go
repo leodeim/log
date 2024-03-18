@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -66,10 +67,16 @@ func nonBlocking() {
 
 func propsLogger() {
 	l := log.New(log.WithName("props"), log.WithWriter(os.Stdout, log.FormatTextColor))
-	l.Warning().Prop("prop1", 123).Prop("prop2", "hello").Msg("I can log in simple text format")
+	l.Warning().Prop("prop1", 123).Prop("prop2", "hello").Msg("I can log in text format with props")
+}
+
+func errorLogger() {
+	l := log.New(log.WithName("props"), log.WithWriter(os.Stdout, log.FormatTextColor))
+	err := errors.New("something failed")
+	l.Warning().Prop("prop1", 123).Err(err).Msg("I can log error as a special prop")
 }
 
 func propsJsonLogger() {
 	l := log.New(log.WithName("propsJson"), log.WithWriter(os.Stdout, log.FormatJson))
-	l.Warning().Prop("prop1", struct{ Name string }{"Leo"}).Prop("prop2", 1.23).Msg("I can log in simple json format")
+	l.Warning().Prop("prop1", struct{ Name string }{"Leo"}).Prop("prop2", 1.23).Msg("I can log in json format with props")
 }
