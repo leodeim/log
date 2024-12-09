@@ -4,8 +4,8 @@
 
 <div align="center">
 
-  <a href="">![Tests](https://github.com/leonidasdeim/log/actions/workflows/go.yml/badge.svg)</a>
-  <a href="">![Code Scanning](https://github.com/leonidasdeim/log/actions/workflows/codeql.yml/badge.svg)</a>
+  <a href="">![Tests](https://github.com/leodeim/log/actions/workflows/go.yml/badge.svg)</a>
+  <a href="">![Code Scanning](https://github.com/leodeim/log/actions/workflows/codeql.yml/badge.svg)</a>
   <a href="https://codecov.io/gh/leonidasdeim/log" > 
     <img src="https://codecov.io/gh/leonidasdeim/log/branch/main/graph/badge.svg?token=3275GV3OGX"/> 
   </a>

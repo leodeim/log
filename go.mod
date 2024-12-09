@@ -1,4 +1,4 @@
-module github.com/leonidasdeim/log
+module github.com/leodeim/log
 
 go 1.21
 

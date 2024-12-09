@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/leonidasdeim/log"
+	"github.com/leodeim/log"
 )
 
 func defaultLogger() {
