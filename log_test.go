@@ -36,7 +36,7 @@ func TestGlobalLogger(t *testing.T) {
 				WithWriter(w2, FormatText),
 			)
 
-			l.Info().Msg(tc.message)
+			l.Info(tc.message)
 			l.Close()
 
 			if tc.mode == ModeNonBlocking {
@@ -88,7 +88,7 @@ func TestLocalLogger(t *testing.T) {
 				l.SetLevel(tc.level)
 			}
 
-			l.Info().Msg(tc.message)
+			l.Info(tc.message)
 
 			if tc.expectedLine != "" {
 				require.NotEmpty(t, w1.Lines)

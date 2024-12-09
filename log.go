@@ -13,11 +13,18 @@ type Logger interface {
 	SetLevel(level Level) error
 	Level() Level
 	Close()
-	Info() *message
-	Error() *message
-	Warning() *message
-	Debug() *message
-	Fatal() *message
+	Info(text string, props ...any)
+	Infof(text string, args ...any)
+	Error(text string, props ...any)
+	Errorf(text string, args ...any)
+	Err(text string, err error)
+	Warning(text string, props ...any)
+	Warningf(text string, args ...any)
+	Warn(text string, err error)
+	Debug(text string, props ...any)
+	Debugf(text string, args ...any)
+	Fatal(text string, err error)
+	Fatalf(text string, args ...any)
 }
 
 type Level string
@@ -221,24 +228,76 @@ func (l *log) Close() {
 	close(l.processor.buf)
 }
 
-func (l *log) Info() *message {
-	return l.newMessage(Info)
+func (l *log) Info(text string, props ...any) {
+	m := l.newMessage(Info)
+	m.msg(text, props...)
 }
 
-func (l *log) Error() *message {
-	return l.newMessage(Error)
+func (l *log) Infof(text string, args ...any) {
+	m := l.newMessage(Info)
+	m.msgf(text, args...)
 }
 
-func (l *log) Warning() *message {
-	return l.newMessage(Warning)
+func (l *log) Error(text string, props ...any) {
+	m := l.newMessage(Error)
+	m.msg(text, props...)
 }
 
-func (l *log) Debug() *message {
-	return l.newMessage(Debug)
+func (l *log) Errorf(text string, args ...any) {
+	m := l.newMessage(Error)
+	m.msgf(text, args...)
 }
 
-func (l *log) Fatal() *message {
-	return l.newMessage(Fatal)
+func (l *log) Err(text string, err error) {
+	m := l.newMessage(Error)
+	if err == nil {
+		m.msg(text)
+	} else {
+		m.msg(text, "error", err.Error())
+	}
+}
+
+func (l *log) Warning(text string, props ...any) {
+	m := l.newMessage(Warning)
+	m.msg(text, props...)
+}
+
+func (l *log) Warningf(text string, args ...any) {
+	m := l.newMessage(Warning)
+	m.msgf(text, args...)
+}
+
+func (l *log) Warn(text string, err error) {
+	m := l.newMessage(Warning)
+	if err == nil {
+		m.msg(text)
+	} else {
+		m.msg(text, "error", err.Error())
+	}
+}
+
+func (l *log) Debug(text string, props ...any) {
+	m := l.newMessage(Debug)
+	m.msg(text, props...)
+}
+
+func (l *log) Debugf(text string, args ...any) {
+	m := l.newMessage(Debug)
+	m.msgf(text, args...)
+}
+
+func (l *log) Fatal(text string, err error) {
+	m := l.newMessage(Fatal)
+	if err == nil {
+		m.msg(text)
+	} else {
+		m.msg(text, "error", err.Error())
+	}
+}
+
+func (l *log) Fatalf(text string, args ...any) {
+	m := l.newMessage(Fatal)
+	m.msgf(text, args...)
 }
 
 func (l *log) newMessage(level Level) *message {
